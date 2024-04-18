@@ -17,20 +17,13 @@ spec:
     - spark-pi
     - --conf
     - spark.executor.instances=8
-    - --class
-    - org.apache.spark.examples.SparkPi
-      #- --conf
-      #- spark.kubernetes.authenticate.driver.serviceAccountName=spark
-    - --conf
-    - spark.kubernetes.executor.request.cores=8
     # Kube specific conf
     - --conf
-    - spark.kubernetes.executor.node.selector.bebida=node
-      #- --conf
-      #- spark.kubernetes.executor.podTemplateFile=/etc/config/executor.yaml
-      # REPLACED by Pod template
+    - spark.kubernetes.executor.request.cores=8
     - --conf
-    - spark.kubernetes.container.image=ryaxtech/spark-on-k8s:v0.1.0
+    - spark.kubernetes.executor.podTemplateFile=/etc/config/executor.yaml
+    - --conf
+    - spark.kubernetes.container.image=ryaxtech/spark-on-k8s:v0.2.0
     - --conf
     - spark.driver.host=spark-app-pi
     - --conf
@@ -40,10 +33,16 @@ spec:
     - --conf
     - spark.eventLog.enabled=true
     - --conf
-    - spark.eventLog.dir=/data/results
-    - local:///usr/local/spark/examples/jars/spark-examples_2.11-2.4.5.jar
+    - spark.eventLog.dir=/data/results/user1/%EXPE_DIR%
+    # App to run
+    - --class
+    - org.apache.spark.examples.SparkPi
+    - file:///lib/spark-3.4.0/examples/jars/spark-examples_2.12-3.4.0.jar
     - "50000"
-    image: ryaxtech/spark-on-k8s:v0.1.0
+    command:
+    - bash
+    - /data/spark-entrypoint.sh
+    image: ryaxtech/spark-on-k8s:v0.2.0
     imagePullPolicy: IfNotPresent
     name: spark-driver-1
     volumeMounts:
@@ -54,9 +53,9 @@ spec:
   restartPolicy: Never
   volumes:
     - name: result-dir
-      hostPath:
-        path: /tmp/event-dir
-        type: DirectoryOrCreate
+      nfs:
+        server: server
+        path: /users # The exported directory
 
     - name: config-volume
       configMap:
@@ -71,12 +70,14 @@ metadata:
 data:
   executor.yaml: |
     spec:
+      containers:
+        - command:
+          - bash
+          - /data/spark-entrypoint.sh
       tolerations:
       - key: "bebida"
         operator: "Exists"
         effect: "NoSchedule"
-      containers:
-      - image: ryaxtech/spark-on-k8s:v0.1.0
 ---
 apiVersion: v1
 kind: Service
