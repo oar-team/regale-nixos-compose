@@ -59,7 +59,7 @@ trap get_result EXIT
 k3s kubectl apply -f /etc/demo/spark-setup.yaml
 
 # use -T 10 as runesp parameter to increase the load
-su - user1 -c "export ESPHOME=$ESPHOME; export ESPSCRATCH=$ESPSCRATCH; runesp -v -b OAR" &
+su - user1 -c "export ESPHOME=$ESPHOME; export ESPSCRATCH=$ESPSCRATCH; runesp -v -T 10 -b OAR" &
 PID=$!
 
 # Put eventLogs in the user1 home result dir
