@@ -25,12 +25,19 @@ cd ..
 chmod -R 777 $ESPSCRATCH
 
 # Cleanup OAR before start
-oardel $(oarstat -J | jq '.[] | .id') || true
-until [[ $(oarstat -J) == '{}' ]]
-do
-  echo Waiting for remaining jobs to be killed...
-  sleep 1
-done
+cleanup
+
+cleanup() {
+  echo == Cleaning remaining jobs
+  set +x
+  oardel $(oarstat -J | jq '.[] | .id')
+  until [[ $(oarstat -J) == '{}' ]]
+  do
+    echo Waiting for remaining jobs to be killed...
+    sleep 1
+  done
+  k3s kubectl delete all --all
+}
 
 # Reset Bebida Shaker to be sure we are on a clean state
 systemctl restart bebida-shaker.service
@@ -49,6 +56,9 @@ get_result() {
   # Copy this script
   cp "${BASH_SOURCE[0]}" $RESULTS_DIR/$EXPE_DIR/expe-script.sh
   journalctl -u bebida-shaker.service > $RESULTS_DIR/$EXPE_DIR/shaker.log
+  
+  cleanup
+  
   echo === Experiment done! 
   echo Results are located here:
   echo $RESULTS_DIR/$EXPE_DIR

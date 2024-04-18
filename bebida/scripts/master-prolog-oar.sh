@@ -7,7 +7,7 @@ echo Enter BEBIDA prolog
 printenv
 id
 
-if [ "$OAR_JOB_NAME" = "BEBIDA_NOOP" ]
+if [[ "$OAR_JOB_NAME" == BEBIDA_NOOP* ]]
 then
     echo BEBIDA_NOOP is set. Do not stop the kubernetes agent
     exit 0
