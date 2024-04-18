@@ -8,6 +8,9 @@ metadata:
 spec:
   # Required to be able to run pods
   serviceAccount: spark
+    #securityContext:
+    #  runAsUser: 1001
+    #  runAsGroup: 100
   containers:
   - args:
     - driver
@@ -23,6 +26,8 @@ spec:
     - --conf
     - spark.kubernetes.executor.podTemplateFile=/etc/config/executor.yaml
     - --conf
+    - spark.kubernetes.executor.node.selector.bebida=node
+    - --conf
     - spark.kubernetes.container.image=ryaxtech/spark-on-k8s:v0.2.0
     - --conf
     - spark.driver.host=spark-app-pi
@@ -30,14 +35,15 @@ spec:
     - spark.driver.port=4041
     - --conf
     - spark.driver.bindAddress=0.0.0.0
-    - --conf
-    - spark.eventLog.enabled=true
-    - --conf
-    - spark.eventLog.dir=/data/results/user1/%EXPE_DIR%
+    # FIXME Need a shared FileSystem for that and user1 NFS has rights issue
+    #- --conf
+    #- spark.eventLog.enabled=true
+    #- --conf
+    #- spark.eventLog.dir=/data/results/user1/%EXPE_DIR%
     # App to run
     - --class
     - org.apache.spark.examples.SparkPi
-    - file:///lib/spark-3.4.0/examples/jars/spark-examples_2.12-3.4.0.jar
+    - file:///lib/spark-3.2.2/examples/jars/spark-examples_2.12-3.2.2.jar
     - "50000"
     command:
     - bash
@@ -78,6 +84,8 @@ data:
       - key: "bebida"
         operator: "Exists"
         effect: "NoSchedule"
+      nodeSelector:
+        bebida: node
 ---
 apiVersion: v1
 kind: Service

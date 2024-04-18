@@ -22,6 +22,8 @@ chmod a+rwx ./*
 
 cd ..
 
+chmod -R 777 $ESPSCRATCH
+
 # Cleanup OAR before start
 oardel $(oarstat -J | jq '.[] | .id') || true
 until [[ $(oarstat -J) == '{}' ]]
@@ -29,7 +31,9 @@ do
   echo Waiting for remaining jobs to be killed...
   sleep 1
 done
-  
+
+# Reset Bebida Shaker to be sure we are on a clean state
+systemctl restart bebida-shaker.service
 
 get_result() {
   set +e
@@ -54,20 +58,23 @@ trap get_result EXIT
 
 k3s kubectl apply -f /etc/demo/spark-setup.yaml
 
-su - user1 -c "export ESPHOME=$ESPHOME; export ESPSCRATCH=$ESPSCRATCH; runesp -v -T 10 -b OAR" &
+# use -T 10 as runesp parameter to increase the load
+su - user1 -c "export ESPHOME=$ESPHOME; export ESPSCRATCH=$ESPSCRATCH; runesp -v -b OAR" &
 PID=$!
 
 # Put eventLogs in the user1 home result dir
 SPARK_APP_TEMPLATED=$ESPSCRATCH/spark-app.yaml
-sed s/%ENV_NAME%/$EXPE_DIR/g  $SPARK_APP > $SPARK_APP_TEMPLATED
+sed s/%EXPE_DIR%/$EXPE_DIR/g  $SPARK_APP > $SPARK_APP_TEMPLATED
 
 # Cleanup spark app
-k3s kubectl delete -f $SPARK_APP_TEMPLATED
+k3s kubectl delete -f $SPARK_APP_TEMPLATED || true
 
-for run in seq 5
+for run in $(seq 5)
 do
     k3s kubectl apply -f $SPARK_APP_TEMPLATED
     k3s kubectl wait --for=jsonpath='{.status.phase}'=Succeeded pod/spark-app-pi --timeout=3600s
+    k3s kubectl get pod spark-app-pi -o json > $ESPSCRATCH/spark-app-pi-$run-pod.json
+    k3s kubectl logs spark-app-pi > $ESPSCRATCH/spark-app-pi-$run-log.txt
     k3s kubectl delete -f $SPARK_APP_TEMPLATED
     sleep 5
 done
