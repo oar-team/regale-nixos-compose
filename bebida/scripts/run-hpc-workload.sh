@@ -7,6 +7,7 @@ set -u
 SIZE=$1
 RESULTS_DIR=$2
 SPARK_APP=${3:-/etc/demo/spark-pi.yaml}
+HEURISTIC=${4:-punch}
 
 export ESPHOME=$(dirname $(dirname $(realpath $(which mkjobmix))))
 
@@ -24,23 +25,18 @@ cd ..
 
 chmod -R 777 $ESPSCRATCH
 
-# Cleanup OAR before start
-cleanup
-
 cleanup() {
   echo == Cleaning remaining jobs
   set +x
-  oardel $(oarstat -J | jq '.[] | .id')
+  oardel $(oarstat -J | jq '.[] | .id') || true
   until [[ $(oarstat -J) == '{}' ]]
   do
     echo Waiting for remaining jobs to be killed...
     sleep 1
   done
   k3s kubectl delete all --all
+  set -x
 }
-
-# Reset Bebida Shaker to be sure we are on a clean state
-systemctl restart bebida-shaker.service
 
 get_result() {
   set +e
@@ -64,9 +60,14 @@ get_result() {
   echo $RESULTS_DIR/$EXPE_DIR
 }
 
-trap get_result EXIT
+# Cleanup OAR before start
+cleanup
 
+# Setup spark
 k3s kubectl apply -f /etc/demo/spark-setup.yaml
+
+# Get results on exit
+trap get_result EXIT
 
 # use -T 10 as runesp parameter to increase the load
 su - user1 -c "export ESPHOME=$ESPHOME; export ESPSCRATCH=$ESPSCRATCH; runesp -v -T 10 -b OAR" &
@@ -75,6 +76,24 @@ PID=$!
 # Put eventLogs in the user1 home result dir
 SPARK_APP_TEMPLATED=$ESPSCRATCH/spark-app.yaml
 sed s/%EXPE_DIR%/$EXPE_DIR/g  $SPARK_APP > $SPARK_APP_TEMPLATED
+
+echo == Selected heuristic: $HEURISTIC
+case $HEURISTIC in
+  none)
+    # Disable Bebida Shaker to be sure we are on a clean state
+    systemct stop Bebida-shaker.service
+    ;;
+  punch)
+    # Reset Bebida Shaker to be sure we are on a clean state
+    systemctl restart bebida-shaker.service
+    ;;
+  deadline)
+    # TODO Add labels
+
+    # Reset Bebida Shaker to be sure we are on a clean state
+    systemctl restart bebida-shaker.service
+
+esac
 
 # Cleanup spark app
 k3s kubectl delete -f $SPARK_APP_TEMPLATED || true
@@ -89,4 +108,4 @@ do
     sleep 5
 done
 echo Done!
-
+  
