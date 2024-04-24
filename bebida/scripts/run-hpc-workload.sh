@@ -52,10 +52,10 @@ get_result() {
   # Copy this script
   cp "${BASH_SOURCE[0]}" $RESULTS_DIR/$EXPE_DIR/expe-script.sh
   journalctl -u bebida-shaker.service > $RESULTS_DIR/$EXPE_DIR/shaker.log
-  
+
   cleanup
-  
-  echo === Experiment done! 
+
+  echo === Experiment done!
   echo Results are located here:
   echo $RESULTS_DIR/$EXPE_DIR
 }
@@ -88,7 +88,8 @@ case $HEURISTIC in
     systemctl restart bebida-shaker.service
     ;;
   deadline)
-    # TODO Add labels
+    # Add annotations
+    bebida-shaker annotate $SPARK_APP_TEMPLATED --deadline=$(date --iso-8601=seconds -d '10 mins') --cores=8 --duration=5 > $SPARK_APP_TEMPLATED
 
     # Reset Bebida Shaker to be sure we are on a clean state
     systemctl restart bebida-shaker.service
@@ -108,4 +109,4 @@ do
     sleep 5
 done
 echo Done!
-  
+
