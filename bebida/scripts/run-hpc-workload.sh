@@ -8,6 +8,7 @@ SIZE=$1
 RESULTS_DIR=$2
 SPARK_APP=${3:-/etc/demo/spark-pi.yaml}
 HEURISTIC=${4:-punch}
+NB_APP_RUN=${5:-5}
 
 export ESPHOME=$(dirname $(dirname $(realpath $(which mkjobmix))))
 
@@ -35,23 +36,35 @@ cleanup() {
     sleep 1
   done
   k3s kubectl delete all --all
+  # Waiting for all resource to be properly delete to avoid deletion of Spark config
+  sleep 5
   set -x
 }
 
 get_result() {
   set +e
+  END_DATE=$(date '+%Y-%m-%d %H:%M:%S')
+
   echo "=== Kill HPC workflow submission"
   kill $PID
   echo "\n=== Copy results from $ESPSCRATCH to $RESULTS_DIR"
-  mkdir $RESULTS_DIR/$EXPE_DIR
+  mkdir -p $RESULTS_DIR/$EXPE_DIR
   cp -r $ESPSCRATCH/* $RESULTS_DIR/$EXPE_DIR
   echo === Get all history and logs
-  # FIXME Should be enough for this year ^^
-  oarstat --gantt "2024-01-01 00:00:00, 2025-01-01 00:00:00" -Jf > $RESULTS_DIR/$EXPE_DIR/oar-jobs.json
+  oarstat --gantt "$START_DATE, $END_DATE" -Jf > $RESULTS_DIR/$EXPE_DIR/oar-jobs.json
   k3s kubectl get events -o json > $RESULTS_DIR/$EXPE_DIR/k8s-events.json
   # Copy this script
   cp "${BASH_SOURCE[0]}" $RESULTS_DIR/$EXPE_DIR/expe-script.sh
   journalctl -u bebida-shaker.service > $RESULTS_DIR/$EXPE_DIR/shaker.log
+  # Add some metadata
+  cat > $RESULTS_DIR/$EXPE_DIR/metadata.json <<EOF
+{
+  "start": "$START_DATE",
+  "end": "$END_DATE",
+  "heuristic": "$HEURISTIC",
+  "nb_app_run": "$NB_APP_RUN"
+}
+EOF
 
   cleanup
 
@@ -69,6 +82,9 @@ k3s kubectl apply -f /etc/demo/spark-setup.yaml
 # Get results on exit
 trap get_result EXIT
 
+# Now that everything is clean starts the experiment
+export START_DATE=$(date '+%Y-%m-%d %H:%M:%S')
+
 # use -T 10 as runesp parameter to increase the load
 su - user1 -c "export ESPHOME=$ESPHOME; export ESPSCRATCH=$ESPSCRATCH; runesp -v -T 10 -b OAR" &
 PID=$!
@@ -81,7 +97,9 @@ echo == Selected heuristic: $HEURISTIC
 case $HEURISTIC in
   none)
     # Disable Bebida Shaker to be sure we are on a clean state
-    systemct stop Bebida-shaker.service
+    systemctl stop bebida-shaker.service
+    sleep 1
+    systemctl status bebida-shaker.service | grep "Stopped BeBiDa Shaker service"
     ;;
   punch)
     # Reset Bebida Shaker to be sure we are on a clean state
@@ -89,17 +107,22 @@ case $HEURISTIC in
     ;;
   deadline)
     # Add annotations
-    bebida-shaker annotate $SPARK_APP_TEMPLATED --deadline=$(date --iso-8601=seconds -d '10 mins') --cores=8 --duration=5 > $SPARK_APP_TEMPLATED
+    SPARK_APP_TMP=$SPARK_APP_TEMPLATED.tmp
+    bebida-shaker annotate --deadline=$(date --iso-8601=seconds -d '10 mins') --cores=8 --duration=5 $SPARK_APP_TEMPLATED > $SPARK_APP_TMP
+    cp $SPARK_APP_TMP $SPARK_APP_TEMPLATED
+    cat $SPARK_APP_TEMPLATED
 
     # Reset Bebida Shaker to be sure we are on a clean state
     systemctl restart bebida-shaker.service
-
 esac
 
 # Cleanup spark app
 k3s kubectl delete -f $SPARK_APP_TEMPLATED || true
 
-for run in $(seq 5)
+# Wait for the first HPC jobs to start
+sleep 10
+
+for run in $(seq $NB_APP_RUN)
 do
     k3s kubectl apply -f $SPARK_APP_TEMPLATED
     k3s kubectl wait --for=jsonpath='{.status.phase}'=Succeeded pod/spark-app-pi --timeout=3600s
