@@ -114,6 +114,10 @@ case $HEURISTIC in
 
     # Reset Bebida Shaker to be sure we are on a clean state
     systemctl restart bebida-shaker.service
+    ;;
+  nohpc)
+    kill $PID
+    systemctl stop bebida-shaker.service
 esac
 
 # Cleanup spark app
