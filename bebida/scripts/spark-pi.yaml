@@ -75,6 +75,9 @@ metadata:
   name: pod-templates
 data:
   executor.yaml: |
+    metadata:
+      annotations:
+        ryax.tech/bebida: "exclude"
     spec:
       containers:
         - command:
