@@ -108,7 +108,17 @@ case $HEURISTIC in
   deadline)
     # Add annotations
     SPARK_APP_TMP=$SPARK_APP_TEMPLATED.tmp
-    bebida-shaker annotate --deadline=$(date --iso-8601=seconds -d '10 mins') --cores=8 --duration=1m $SPARK_APP_TEMPLATED > $SPARK_APP_TMP
+    bebida-shaker annotate --deadline=$(date --iso-8601=seconds -d '2 mins') --cores=16 --duration=1m $SPARK_APP_TEMPLATED > $SPARK_APP_TMP
+    cp $SPARK_APP_TMP $SPARK_APP_TEMPLATED
+    cat $SPARK_APP_TEMPLATED
+
+    # Reset Bebida Shaker to be sure we are on a clean state
+    systemctl restart bebida-shaker.service
+    ;;
+  annotated)
+    # Add annotations
+    SPARK_APP_TMP=$SPARK_APP_TEMPLATED.tmp
+    bebida-shaker annotate --cores=16 --duration=1m $SPARK_APP_TEMPLATED > $SPARK_APP_TMP
     cp $SPARK_APP_TMP $SPARK_APP_TEMPLATED
     cat $SPARK_APP_TEMPLATED
 
@@ -118,6 +128,13 @@ case $HEURISTIC in
   nohpc)
     kill $PID
     systemctl stop bebida-shaker.service
+    ;;
+  refill)
+    # Reset Bebida Shaker to be sure we are on a clean state
+    systemctl restart bebida-shaker.service
+
+    bebida-shaker refill --cores=16
+    ;;
 esac
 
 # Cleanup spark app

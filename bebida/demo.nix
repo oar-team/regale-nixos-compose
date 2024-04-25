@@ -18,6 +18,9 @@
   environment.etc."demo/run-hpc-workload.sh" = {
     source = ./scripts/run-hpc-workload.sh;
   };
+  environment.etc."demo/run-all.sh" = {
+    source = ./scripts/run-all.sh;
+  };
   environment.etc."demo/spark-setup.yaml" = {
     source = ./scripts/spark-sa.yaml;
   };
