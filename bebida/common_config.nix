@@ -11,6 +11,7 @@ let
     BEBIDA_SSH_USER="root"
     KUBECONFIG=/etc/bebida/kubeconfig.yaml
     BEBIDA_HPC_SCHEDULER_TYPE=${HPCScheduler}
+    BEBIDA_CORES_PER_NODE=18
   '';
 in
 {
@@ -20,7 +21,7 @@ in
   ];
 
   services.bebida-shaker.environmentFile = bebidaEnvFile;
-  environment.etc.bebida."config.env" = bebidaEnvFile;
+  environment.etc."bebida/config.env" = { source = bebidaEnvFile; };
 
   environment.systemPackages = [
     pkgs.python3
@@ -30,6 +31,7 @@ in
     pkgs.htop
     pkgs.tree
     pkgs.cri-tools
+    pkgs.jq
   ];
 
   environment.noXlibs = false;

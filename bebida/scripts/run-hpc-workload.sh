@@ -9,7 +9,7 @@ RESULTS_DIR=$2
 SPARK_APP=${3:-/etc/demo/spark-pi.yaml}
 HEURISTIC=${4:-punch}
 NB_APP_RUN=${5:-5}
-CORES_PER_NODE=${6:-16}
+CORES_PER_NODE=${6:-18}
 
 export ESPHOME=$(dirname $(dirname $(realpath $(which mkjobmix))))
 
@@ -136,8 +136,16 @@ case $HEURISTIC in
     # Reset Bebida Shaker to be sure we are on a clean state
     systemctl restart bebida-shaker.service
 
+    set -a
     source /etc/bebida/config.env
+    set +a
+    export BEBIDA_SSH_HOSTNAME=server
     bebida-shaker refill --cores=$CORES_PER_NODE
+    
+    # Disable Bebida Shaker to be sure we are on a clean state
+    systemctl stop bebida-shaker.service
+    sleep 1
+    systemctl status bebida-shaker.service | grep "Stopped BeBiDa Shaker service"
     ;;
 esac
 
