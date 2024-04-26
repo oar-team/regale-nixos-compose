@@ -136,6 +136,7 @@ case $HEURISTIC in
     # Reset Bebida Shaker to be sure we are on a clean state
     systemctl restart bebida-shaker.service
 
+    source /etc/bebida/config.env
     bebida-shaker refill --cores=$CORES_PER_NODE
     ;;
 esac

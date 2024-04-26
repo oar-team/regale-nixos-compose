@@ -21,11 +21,11 @@
         "nixpkgs": "nixpkgs"
       },
       "locked": {
-        "lastModified": 1714134560,
-        "narHash": "sha256-oVu3ttbIoEUBphCJ2JCu26ki3F9KXlqK0qcSyn+M9z4=",
+        "lastModified": 1714138886,
+        "narHash": "sha256-68nn6zNe55i6M8NcYh1ejmxU/4taMDEd9foLdyAj4ZA=",
         "owner": "RyaxTech",
         "repo": "bebida-optimization-service",
-        "rev": "81813b470ac9248f5be2a33ea60d6e20b591cec0",
+        "rev": "c9667be6aa2df660d21be4c46663ad06373ec682",
         "type": "github"
       },
       "original": {
