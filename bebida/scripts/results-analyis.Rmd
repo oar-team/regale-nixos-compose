@@ -7,19 +7,20 @@ output: html_document
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
-install.packages('rjson')
 ```
 
 ## Experiment Design
 
 Running on Gros cluster on Nancy on 16 nodes (288 cores) with the following heuristics:
-- NoHPC: In order to have a control experiment, run the Bebida app without HPC workload
-- None: Raw bebida implementation without optimization
-- Punch: Create jobs at submission time with arbitrary resource requests
-- Annotated: Create jobs on submission using resource annotations to shape the job
-- TimeCritical: Use resource quota to dedicate a dynamic set of resources to Bebida application
 
-The Deadline heuristic is similar to Punch Annotated but a deadline provided. It's goal is to run before a given deadline. Because it does not follow the same objective it is not compared to the others.
+* NoHPC: In order to have a control experiment, run the Bebida app without HPC workload
+* None: Raw bebida implementation without optimization
+* Punch: Create jobs at submission time with arbitrary resource requests
+* Annotated: Create jobs on submission using resource annotations to shape the job
+* TimeCritical: Use resource quota to dedicate a dynamic set of resources to Bebida application
+* Deadline heuristic is similar to Punch Annotated but a deadline provided.
+
+The Deadline goal is to run before a given deadline. Because it does not follow the same objective it is not compared to the others.
 
 ## Execution time
 
@@ -31,15 +32,15 @@ library(rjson)
 ```
 
 Get data from the experiment result directory:
-```{r bdaDf hpcDf metadata}
-resultDir = "/home/mmercier/Projects/bebida-optimization-service/result-all-2/"
+```{r expeDirs}
+resultDir = "/home/mmercier/Projects/bebida-optimization-service/result-all-4/"
 
 expeDirs = Sys.glob(sprintf("%s/*", resultDir))
 expeDirs
 ```
 
 Extract BDA applications metrics:
-```{r}
+```{r bdaDf}
 
 bdaDf <- data.frame(heuristic = character(), execution_time = integer())
 
@@ -48,17 +49,23 @@ for (expeDir in expeDirs) {
   metadata <- fromJSON(file=sprintf("%s/metadata.json", expeDir))
   
   for (iteration in 1:metadata$nb_app_run) {
-    podState <- fromJSON(file=sprintf("%s/spark-app-pi-%d-pod.json", expeDir, iteration))
+    possibleError <- tryCatch({
+      podState <- fromJSON(file=sprintf("%s/spark-app-pi-%d-pod.json", expeDir, iteration))
   
     startTime = parse_datetime(podState$status$containerStatuses[[1]]$state$terminated$startedAt)
     endTime = parse_datetime(podState$status$containerStatuses[[1]]$state$terminated$finishedAt)
 
     bdaDf <- bdaDf %>% add_row(heuristic = metadata$heuristic, execution_time = as.numeric(difftime(endTime,startTime),units="secs"))
+    }, error=function(e) e)
+    if(inherits(possibleError, "error")) next
   }
 }
 bdaDf
 ```
-
+Number of runs per Heuristics
+```{r}
+bdaDf %>% count(heuristic)
+```
 Extract HPC Jobs metrics.
 
 WARNING: Some job give a submission time after the starting time. which gives a negative waiting time. These jobs are excluded.
@@ -117,6 +124,7 @@ bdaDfStats %>%
   ggtitle("Mean execution time in seconds (with standard deviation)")
 
 ```
+
 ## Plot for HPC
 
 ```{r}
