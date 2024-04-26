@@ -4,13 +4,7 @@ let
   toBase64 = (import ./helpers.nix { inherit (pkgs) lib; }).toBase64;
   sshPrivateKey = ./secrets/ssh_key;
   sshPublicKey = ./secrets/ssh_key.pub;
-in
-{
-  # Inject key to permit localhost ssh from bebida-shaker
-  users.users.root.openssh.authorizedKeys.keys = [
-    (builtins.readFile sshPublicKey)
-  ];
-  services.bebida-shaker.environmentFile = pkgs.writeText "envFile" ''
+  bebidaEnvFile = pkgs.writeText "envFile" ''
     BEBIDA_SSH_PKEY=${toBase64 (builtins.readFile sshPrivateKey)}
     BEBIDA_SSH_HOSTNAME="frontend"
     BEBIDA_SSH_PORT="22"
@@ -18,6 +12,15 @@ in
     KUBECONFIG=/etc/bebida/kubeconfig.yaml
     BEBIDA_HPC_SCHEDULER_TYPE=${HPCScheduler}
   '';
+in
+{
+  # Inject key to permit localhost ssh from bebida-shaker
+  users.users.root.openssh.authorizedKeys.keys = [
+    (builtins.readFile sshPublicKey)
+  ];
+
+  services.bebida-shaker.environmentFile = bebidaEnvFile;
+  environment.etc.bebida."config.env" = bebidaEnvFile;
 
   environment.systemPackages = [
     pkgs.python3
