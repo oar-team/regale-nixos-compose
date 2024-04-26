@@ -21,6 +21,9 @@
   environment.etc."demo/run-all.sh" = {
     source = ./scripts/run-all.sh;
   };
+  environment.etc."demo/pre-fetcher.yaml" = {
+    source = ./scripts/pre-fetcher.yaml;
+  };
   environment.etc."demo/spark-setup.yaml" = {
     source = ./scripts/spark-sa.yaml;
   };

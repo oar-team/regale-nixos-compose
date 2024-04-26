@@ -19,10 +19,10 @@ spec:
     - --name
     - spark-pi
     - --conf
-    - spark.executor.instances=8
+    - spark.executor.instances=4
     # Kube specific conf
     - --conf
-    - spark.kubernetes.executor.request.cores=8
+    - spark.kubernetes.executor.request.cores=16
     - --conf
     - spark.kubernetes.executor.podTemplateFile=/etc/config/executor.yaml
     - --conf

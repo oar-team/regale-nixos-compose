@@ -9,6 +9,7 @@ RESULTS_DIR=$2
 SPARK_APP=${3:-/etc/demo/spark-pi.yaml}
 HEURISTIC=${4:-punch}
 NB_APP_RUN=${5:-5}
+CORES_PER_NODE=${6:-16}
 
 export ESPHOME=$(dirname $(dirname $(realpath $(which mkjobmix))))
 
@@ -75,7 +76,9 @@ EOF
 
 # Cleanup OAR before start
 cleanup
-
+# Prefetch the image on all nodes
+k3s kubectl apply -f /etc/demo/pre-fetcher.yaml
+k3s kubectl kubectl rollout status daemonset prepuller --timeout=300s
 # Setup spark
 k3s kubectl apply -f /etc/demo/spark-setup.yaml
 
@@ -108,7 +111,7 @@ case $HEURISTIC in
   deadline)
     # Add annotations
     SPARK_APP_TMP=$SPARK_APP_TEMPLATED.tmp
-    bebida-shaker annotate --deadline=$(date --iso-8601=seconds -d '2 mins') --cores=16 --duration=1m $SPARK_APP_TEMPLATED > $SPARK_APP_TMP
+    bebida-shaker annotate --deadline=$(date --iso-8601=seconds -d '2 mins') --cores=$CORES_PER_NODE --duration=1m $SPARK_APP_TEMPLATED > $SPARK_APP_TMP
     cp $SPARK_APP_TMP $SPARK_APP_TEMPLATED
     cat $SPARK_APP_TEMPLATED
 
@@ -118,7 +121,7 @@ case $HEURISTIC in
   annotated)
     # Add annotations
     SPARK_APP_TMP=$SPARK_APP_TEMPLATED.tmp
-    bebida-shaker annotate --cores=16 --duration=1m $SPARK_APP_TEMPLATED > $SPARK_APP_TMP
+    bebida-shaker annotate --cores=$CORES_PER_NODE --duration=1m $SPARK_APP_TEMPLATED > $SPARK_APP_TMP
     cp $SPARK_APP_TMP $SPARK_APP_TEMPLATED
     cat $SPARK_APP_TEMPLATED
 
@@ -133,7 +136,7 @@ case $HEURISTIC in
     # Reset Bebida Shaker to be sure we are on a clean state
     systemctl restart bebida-shaker.service
 
-    bebida-shaker refill --cores=16
+    bebida-shaker refill --cores=$CORES_PER_NODE
     ;;
 esac
 
