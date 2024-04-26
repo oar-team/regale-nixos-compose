@@ -78,7 +78,7 @@ EOF
 cleanup
 # Prefetch the image on all nodes
 k3s kubectl apply -f /etc/demo/pre-fetcher.yaml
-k3s kubectl kubectl rollout status daemonset prepuller --timeout=300s
+k3s kubectl rollout status daemonset prepuller --timeout=300s
 # Setup spark
 k3s kubectl apply -f /etc/demo/spark-setup.yaml
 

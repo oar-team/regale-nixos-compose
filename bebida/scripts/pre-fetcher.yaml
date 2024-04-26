@@ -1,4 +1,4 @@
-piVersion: apps/v1
+apiVersion: apps/v1
 kind: DaemonSet
 metadata:
   name: prepuller
@@ -10,7 +10,13 @@ spec:
     metadata:
       labels:
         name: prepuller
+      annotations:
+        ryax.tech/bebida: exclude
     spec:
+      # Run on all nodes
+      tolerations:
+        - effect: NoSchedule
+          operator: Exists
       # Configure an init container for each image you want to pull
       initContainers:
         - name: prepuller-1
